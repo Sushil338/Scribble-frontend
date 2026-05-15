@@ -1,30 +1,9 @@
-import { useEffect, useState } from "react";
-import { Lock, Eye, EyeOff, User, AlertCircle, ArrowRight } from 'lucide-react'
-import { API, setAuthToken } from '../api';
-
-const getInitialError = () => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('oauthError') || sessionStorage.getItem('authError') || '';
-};
+import { useState } from 'react';
 
 const Login = ({ onLoginSuccess, onGoToRegister }) => {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
-    const [error, setError] = useState(getInitialError);
+    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const authError = sessionStorage.getItem('authError');
-
-        if (params.has('oauthError')) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-
-        if (authError) {
-            sessionStorage.removeItem('authError');
-        }
-    }, []);
 
     const handleChange = (e) => {
         setCredentials({ ...credentials, [e.target.name]: e.target.value });
@@ -36,126 +15,65 @@ const Login = ({ onLoginSuccess, onGoToRegister }) => {
         setLoading(true);
 
         try {
-            const response = await API.post('/auth/login', credentials);
-            const { token, username, id, user } = response.data;
-
-            console.log("LOGIN RESPONSE:", response.data);
-
-            if (token && username && id) {
-                localStorage.setItem('token', token);
-                localStorage.setItem('username', username);
-                localStorage.setItem('userId', id);
-
-                setAuthToken(token);
-                onLoginSuccess(user || { username, id });
-            } else {
-                throw new Error("Invalid response from server");
-            }
-
+            await onLoginSuccess(credentials);
         } catch (err) {
-            console.error("Login Error:", err);
-
-            // If the error is specifically about an expired token, clear storage
-            if (err.message.includes("expired")) {
-                localStorage.clear();
-                setAuthToken('');
-            }
-
-            const errorMessage = typeof err.response?.data === 'string'
-                ? err.response.data
-                : err.response?.data?.message || "Connection failed. Is the server running?";
-
-            setError(errorMessage);
+            setError(err.response?.data?.message || 'Login failed. Check your username and password.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h1 className="text-2xl font-semibold text-gray-900">Login</h1>
+            <p className="mt-1 text-sm text-gray-500">Use your Scribble account.</p>
 
-                <div className="text-center mb-8">
-                    <h2 className="text-3xl font-extrabold text-blue-600">Welcome Back</h2>
-                    <p className="text-gray-500 mt-2">Log in to manage your budget</p>
+            {error && (
+                <div className="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Username</label>
+                    <input
+                        name="username"
+                        value={credentials.username}
+                        onChange={handleChange}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                        required
+                    />
                 </div>
 
-                {error && (
-                    <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg flex items-center text-sm">
-                        <AlertCircle className="mr-2" size={16} /> {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">
-                            Username
-                        </label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-3.5 text-gray-400">
-                                <User size={18} />
-                            </span>
-                            <input
-                                name="username"
-                                type="text"
-                                required
-                                value={credentials.username}
-                                onChange={handleChange}
-                                className="w-full pl-10 pr-3 py-2.5 border rounded-lg"
-                                placeholder="Enter username"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">
-                            Password
-                        </label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-3.5 text-gray-400">
-                                <Lock size={18} />
-                            </span>
-                            <input
-                                name="password"
-                                type={showPassword ? "text" : "password"}
-                                required
-                                value={credentials.password}
-                                onChange={handleChange}
-                                className="w-full pl-10 pr-3 py-2.5 border rounded-lg"
-                                placeholder="Enter password"
-                            />
-                            <span
-                                className="absolute right-3 top-3.5 text-gray-400 cursor-pointer"
-                                onClick={() => setShowPassword(!showPassword)}
-                            >
-                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                            </span>
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full flex justify-center items-center bg-blue-600 text-white py-2.5 rounded-lg font-bold"
-                    >
-                        {loading ? "Authenticating..." : "Sign In"}
-                        {!loading && <ArrowRight className="ml-2" size={18} />}
-                    </button>
-                </form>
-
-                <div className="mt-6 text-center">
-                    <p className="text-sm">
-                        Don't have an account?{' '}
-                        <button
-                            onClick={onGoToRegister}
-                            className="text-blue-600 font-bold"
-                        >
-                            Register
-                        </button>
-                    </p>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Password</label>
+                    <input
+                        name="password"
+                        type="password"
+                        value={credentials.password}
+                        onChange={handleChange}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                        required
+                    />
                 </div>
 
-            </div>
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full rounded bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-60"
+                >
+                    {loading ? 'Logging in...' : 'Login'}
+                </button>
+            </form>
+
+            <button
+                type="button"
+                onClick={onGoToRegister}
+                className="mt-4 w-full text-sm text-blue-600"
+            >
+                Create account
+            </button>
         </div>
     );
 };

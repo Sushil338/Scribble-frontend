@@ -1,15 +1,11 @@
 import { useState } from 'react';
-import { User, Lock, Mail, CheckCircle, AlertCircle } from 'lucide-react';
-import { API } from '../api';
+import { useAuth } from '../hooks/useAuth';
 
 const Register = ({ onBackToLogin }) => {
-    const [formData, setFormData] = useState({
-        username: '',
-        password: '',
-        email: ''
-    });
-    const [success, setSuccess] = useState(false);
+    const { register } = useAuth();
+    const [formData, setFormData] = useState({ username: '', email: '', password: '' });
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
@@ -19,63 +15,88 @@ const Register = ({ onBackToLogin }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
         setLoading(true);
 
         try {
-            await API.post('/auth/register', formData);
-            setSuccess(true);
-            setTimeout(() => onBackToLogin(), 2000); // Redirect to login after 2 seconds
+            await register(formData);
+            setSuccess('Account created. You can login now.');
         } catch (err) {
-            const errorMessage = typeof err.response?.data === 'string'
-                ? err.response.data
-                : err.response?.data?.message || "Registration failed. Is the server running?";
-
-            setError(errorMessage);
+            setError(err.response?.data?.message || 'Registration failed.');
         } finally {
             setLoading(false);
         }
     };
 
-    if (success) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center p-8 bg-white rounded-2xl shadow-xl">
-                    <CheckCircle className="mx-auto text-green-500 mb-4" size={64} />
-                    <h2 className="text-2xl font-bold">Account Created!</h2>
-                    <p className="text-gray-500">Taking you to the login screen...</p>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="text-3xl font-bold text-center text-blue-600 mb-6">Join Budgeter</h2>
-                {error && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg flex items-center text-sm">
-                        <AlertCircle className="mr-2" size={16} /> {error}
-                    </div>
-                )}
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="relative">
-                        <User className="absolute left-3 top-3 text-gray-400" size={18} />
-                        <input name="username" placeholder="Username" required className="w-full pl-10 pr-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" onChange={handleChange} />
-                    </div>
-                    <div className="relative">
-                        <Mail className="absolute left-3 top-3 text-gray-400" size={18} />
-                        <input name="email" type="email" placeholder="Email Address" required className="w-full pl-10 pr-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" onChange={handleChange} />
-                    </div>
-                    <div className="relative">
-                        <Lock className="absolute left-3 top-3 text-gray-400" size={18} />
-                        <input name="password" type="password" placeholder="Password" required className="w-full pl-10 pr-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" onChange={handleChange} />
-                    </div>
-                    <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition-all disabled:opacity-60">
-                        {loading ? 'Creating Account...' : 'Create Account'}
-                    </button>
-                </form>
-                <button onClick={onBackToLogin} className="w-full mt-4 text-sm text-blue-500 hover:underline">Already have an account? Login</button>
-            </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h1 className="text-2xl font-semibold text-gray-900">Register</h1>
+            <p className="mt-1 text-sm text-gray-500">Create a simple Scribble account.</p>
+
+            {error && (
+                <div className="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+
+            {success && (
+                <div className="mt-4 rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                    {success}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Username</label>
+                    <input
+                        name="username"
+                        value={formData.username}
+                        onChange={handleChange}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <input
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Password</label>
+                    <input
+                        name="password"
+                        type="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        className="mt-1 w-full rounded border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                        required
+                    />
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full rounded bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-60"
+                >
+                    {loading ? 'Creating...' : 'Register'}
+                </button>
+            </form>
+
+            <button
+                type="button"
+                onClick={onBackToLogin}
+                className="mt-4 w-full text-sm text-blue-600"
+            >
+                Back to login
+            </button>
         </div>
     );
 };
